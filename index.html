@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pokédle League</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo"></div><div><b>Pokédle League</b><span>Competition Analytics</span></div></div>
+    <nav class="nav">
+      <button class="active" data-view="dashboard">◈ Dashboard</button>
+      <button data-view="register">＋ Registrar partida</button>
+      <button data-view="players">♙ Jugadores</button>
+      <button data-view="history">☷ Historial</button>
+    </nav>
+    <div class="side-foot">Datos guardados en database.json</div>
+  </aside>
+  <main class="main">
+    <section id="dashboard" class="section active">
+      <div class="topbar"><div><h1>Panel de competición</h1><p>Rendimiento, puntos y evolución de toda la liga.</p></div><button class="btn btn-primary" onclick="go('register')">Registrar resultado</button></div>
+      <div class="grid kpis">
+        <div class="card kpi"><span>Jugadores activos</span><strong id="kPlayers">0</strong><small>Plantilla total</small></div>
+        <div class="card kpi"><span>Partidas registradas</span><strong id="kGames">0</strong><small id="kMonthGames">0 este mes</small></div>
+        <div class="card kpi"><span>Media de puntos</span><strong id="kAvgPoints">0</strong><small>Por resultado</small></div>
+        <div class="card kpi"><span>Media de intentos</span><strong id="kAvgAttempts">0</strong><small>Menor es mejor</small></div>
+      </div>
+      <div class="grid dashboard-grid">
+        <div class="card chart-card"><div class="card-head"><h3>Puntos por categoría</h3><select id="chartMonth"></select></div><canvas id="categoryChart"></canvas></div>
+        <div class="card"><div class="card-head"><h3>Ranking mensual</h3><span class="month-label" id="rankingMonth"></span></div><table class="ranking"><thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Media</th></tr></thead><tbody id="rankingBody"></tbody></table></div>
+      </div>
+      <div class="grid category-grid" id="categoryCards"></div>
+      <div class="grid dashboard-grid">
+        <div class="card chart-card"><div class="card-head"><h3>Evolución mensual de puntos</h3></div><canvas id="trendChart"></canvas></div>
+        <div class="card chart-card"><div class="card-head"><h3>Distribución por generación</h3></div><canvas id="generationChart"></canvas></div>
+      </div>
+    </section>
+
+    <section id="register" class="section">
+      <div class="topbar"><div><h1>Registrar partida</h1><p>Guarda intentos y generación para cada modalidad.</p></div></div>
+      <div class="grid forms-grid">
+        <form class="card" id="resultForm">
+          <div class="field"><label>Fecha</label><input id="date" type="date" required></div>
+          <div class="field"><label>Jugador</label><select id="playerId" required></select></div>
+          <div class="field"><label>Categoría</label><select id="category" required><option value="classic">Adivina Pokémon</option><option value="silhouette">Silueta</option><option value="zoom">Zoom / Carta</option><option value="description">Descripción</option></select></div>
+          <div class="field"><label>Intentos</label><input id="attempts" type="number" min="1" max="99" value="1" required></div>
+          <div class="field"><label>Generación</label><select id="generation"></select></div>
+          <label class="check"><input id="solved" type="checkbox" checked> Pokémon acertado</label>
+          <button class="btn btn-primary" type="submit">Guardar resultado</button>
+        </form>
+        <div class="card">
+          <h3>Sistema de puntuación</h3>
+          <p style="color:var(--muted);line-height:1.7">Cada categoría resuelta parte de <b>100 puntos</b>. Se descuentan <b>8 puntos</b> por cada intento adicional. Un resultado no resuelto obtiene 0 puntos. Registrar de nuevo el mismo jugador, fecha y categoría actualiza la marca anterior.</p>
+          <div id="liveScore" style="font-size:46px;font-weight:900;color:var(--accent);margin-top:30px">100 pts</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="players" class="section">
+      <div class="topbar"><div><h1>Jugadores</h1><p>Los nuevos participantes se guardan directamente en el JSON.</p></div></div>
+      <div class="grid forms-grid">
+        <form class="card" id="playerForm"><div class="field"><label>Nombre del jugador</label><input id="playerName" maxlength="32" placeholder="Ej. Red" required></div><button class="btn btn-primary">Añadir jugador</button></form>
+        <div class="card"><div class="card-head"><h3>Plantilla</h3><span id="playerCount" class="pill"></span></div><div id="playerList"></div></div>
+      </div>
+    </section>
+
+    <section id="history" class="section">
+      <div class="topbar"><div><h1>Historial</h1><p>Consulta y administra todos los resultados.</p></div></div>
+      <div class="card">
+        <div class="history-toolbar"><input id="historyMonth" type="month"><select id="historyPlayer"></select><select id="historyCategory"><option value="">Todas las categorías</option><option value="classic">Adivina Pokémon</option><option value="silhouette">Silueta</option><option value="zoom">Zoom / Carta</option><option value="description">Descripción</option></select></div>
+        <div style="overflow:auto"><table class="ranking"><thead><tr><th>Fecha</th><th>Jugador</th><th>Categoría</th><th>Intentos</th><th>Gen.</th><th>Puntos</th><th></th></tr></thead><tbody id="historyBody"></tbody></table></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body></html>
