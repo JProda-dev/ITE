@@ -1,75 +1,1397 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pokédle League</title><link rel="stylesheet" href="styles.css"></head>
-<body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand"><div class="logo"></div><div><b>Pokédle League</b><span>Competition Analytics</span></div></div>
-    <nav class="nav">
-      <button class="active" data-view="dashboard">◈ Dashboard</button>
-      <button data-view="register">＋ Registrar partida</button>
-      <button data-view="players">♙ Jugadores</button>
-      <button data-view="history">☷ Historial</button>
-    </nav>
-    <div class="side-foot">Datos guardados en database.json</div>
-  </aside>
-  <main class="main">
-    <section id="dashboard" class="section active">
-      <div class="topbar"><div><h1>Panel de competición</h1><p>Rendimiento, puntos y evolución de toda la liga.</p></div><button class="btn btn-primary" onclick="go('register')">Registrar resultado</button></div>
-      <div class="grid kpis">
-        <div class="card kpi"><span>Jugadores activos</span><strong id="kPlayers">0</strong><small>Plantilla total</small></div>
-        <div class="card kpi"><span>Partidas registradas</span><strong id="kGames">0</strong><small id="kMonthGames">0 este mes</small></div>
-        <div class="card kpi"><span>Media de puntos</span><strong id="kAvgPoints">0</strong><small>Por resultado</small></div>
-        <div class="card kpi"><span>Media de intentos</span><strong id="kAvgAttempts">0</strong><small>Menor es mejor</small></div>
-      </div>
-      <div class="grid dashboard-grid">
-        <div class="card chart-card"><div class="card-head"><h3>Puntos por categoría</h3><select id="chartMonth"></select></div><canvas id="categoryChart"></canvas></div>
-        <div class="card"><div class="card-head"><h3>Ranking mensual</h3><span class="month-label" id="rankingMonth"></span></div><table class="ranking"><thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Media</th></tr></thead><tbody id="rankingBody"></tbody></table></div>
-      </div>
-      <div class="grid category-grid" id="categoryCards"></div>
-      <div class="grid dashboard-grid">
-        <div class="card chart-card"><div class="card-head"><h3>Evolución mensual de puntos</h3></div><canvas id="trendChart"></canvas></div>
-        <div class="card chart-card"><div class="card-head"><h3>Distribución por generación</h3></div><canvas id="generationChart"></canvas></div>
-      </div>
-    </section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordGuess Dashboard</title>
 
-    <section id="register" class="section">
-      <div class="topbar"><div><h1>Registrar partida</h1><p>Guarda intentos y generación para cada modalidad.</p></div></div>
-      <div class="grid forms-grid">
-        <form class="card" id="resultForm">
-          <div class="field"><label>Fecha</label><input id="date" type="date" required></div>
-          <div class="field"><label>Jugador</label><select id="playerId" required></select></div>
-          <div class="field"><label>Categoría</label><select id="category" required><option value="classic">Adivina Pokémon</option><option value="silhouette">Silueta</option><option value="zoom">Zoom / Carta</option><option value="description">Descripción</option></select></div>
-          <div class="field"><label>Intentos</label><input id="attempts" type="number" min="1" max="99" value="1" required></div>
-          <div class="field"><label>Generación</label><select id="generation"></select></div>
-          <label class="check"><input id="solved" type="checkbox" checked> Pokémon acertado</label>
-          <button class="btn btn-primary" type="submit">Guardar resultado</button>
-        </form>
-        <div class="card">
-          <h3>Sistema de puntuación</h3>
-          <p style="color:var(--muted);line-height:1.7">Cada categoría resuelta parte de <b>100 puntos</b>. Se descuentan <b>8 puntos</b> por cada intento adicional. Un resultado no resuelto obtiene 0 puntos. Registrar de nuevo el mismo jugador, fecha y categoría actualiza la marca anterior.</p>
-          <div id="liveScore" style="font-size:46px;font-weight:900;color:var(--accent);margin-top:30px">100 pts</div>
+  <style>
+    :root{
+      --bg:#f4f6fb;
+      --panel:#ffffff;
+      --panel-soft:#f8fafc;
+      --line:#e2e8f0;
+      --line-strong:#cbd5e1;
+      --text:#0f172a;
+      --muted:#64748b;
+      --muted-2:#94a3b8;
+      --primary:#2563eb;
+      --primary-dark:#1d4ed8;
+      --primary-soft:#eff6ff;
+      --success:#16a34a;
+      --warning:#d97706;
+      --danger:#dc2626;
+      --radius:16px;
+      --shadow:0 12px 30px rgba(15,23,42,.07);
+    }
+
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    button,
+    input,
+    select{
+      font:inherit;
+    }
+
+    button{
+      cursor:pointer;
+    }
+
+    .app{
+      max-width:1280px;
+      margin:0 auto;
+      padding:24px;
+    }
+
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:18px;
+      margin-bottom:22px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .brand-logo{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      background:var(--primary);
+      color:white;
+      font-weight:900;
+      letter-spacing:-.04em;
+      box-shadow:0 10px 25px rgba(37,99,235,.22);
+    }
+
+    .brand h1{
+      margin:0;
+      font-size:1.45rem;
+      line-height:1.1;
+      letter-spacing:-.04em;
+    }
+
+    .brand p{
+      margin:3px 0 0;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+
+    .date-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 13px;
+      border-radius:999px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:.9rem;
+      font-weight:700;
+      box-shadow:var(--shadow);
+      white-space:nowrap;
+    }
+
+    .status-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--success);
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
+      margin-bottom:18px;
+    }
+
+    .stat-card,
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+
+    .stat-card{
+      padding:18px;
+    }
+
+    .stat-label{
+      color:var(--muted);
+      font-size:.82rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    .stat-value{
+      margin-top:8px;
+      font-size:2rem;
+      line-height:1;
+      font-weight:900;
+      letter-spacing:-.05em;
+    }
+
+    .stat-sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.86rem;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:360px 1fr;
+      gap:18px;
+      align-items:start;
+    }
+
+    .stack{
+      display:grid;
+      gap:18px;
+    }
+
+    .card{
+      padding:18px;
+    }
+
+    .card-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .card-title{
+      margin:0;
+      font-size:1rem;
+      letter-spacing:-.02em;
+    }
+
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:5px 9px;
+      border-radius:999px;
+      background:var(--panel-soft);
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:.76rem;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .tag.primary{
+      color:var(--primary-dark);
+      background:var(--primary-soft);
+      border-color:#bfdbfe;
+    }
+
+    .field{
+      display:grid;
+      gap:7px;
+      margin-bottom:12px;
+    }
+
+    label{
+      color:#334155;
+      font-size:.83rem;
+      font-weight:800;
+    }
+
+    input,
+    select{
+      width:100%;
+      border:1px solid var(--line-strong);
+      background:#fff;
+      color:var(--text);
+      border-radius:12px;
+      padding:11px 12px;
+      outline:none;
+      transition:.16s ease;
+    }
+
+    input:focus,
+    select:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 4px rgba(37,99,235,.12);
+    }
+
+    input::placeholder{
+      color:var(--muted-2);
+    }
+
+    .btn{
+      width:100%;
+      border:1px solid transparent;
+      border-radius:12px;
+      padding:11px 14px;
+      background:var(--primary);
+      color:white;
+      font-weight:850;
+      transition:.16s ease;
+    }
+
+    .btn:hover{
+      background:var(--primary-dark);
+      transform:translateY(-1px);
+    }
+
+    .btn.secondary{
+      color:var(--text);
+      background:var(--panel-soft);
+      border-color:var(--line);
+    }
+
+    .btn.secondary:hover{
+      background:#eef2f7;
+    }
+
+    .btn.success{
+      background:var(--success);
+    }
+
+    .btn.success:hover{
+      background:#15803d;
+    }
+
+    .info-box{
+      padding:12px;
+      border-radius:13px;
+      background:var(--panel-soft);
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:.88rem;
+      line-height:1.45;
+    }
+
+    .divider{
+      border:0;
+      border-top:1px solid var(--line);
+      margin:16px 0;
+    }
+
+    .rounds{
+      display:grid;
+      gap:10px;
+    }
+
+    .round-card{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius:13px;
+      background:var(--panel-soft);
+    }
+
+    .round-number{
+      width:36px;
+      height:36px;
+      border-radius:10px;
+      display:grid;
+      place-items:center;
+      background:#fff;
+      border:1px solid var(--line);
+      color:var(--primary-dark);
+      font-weight:900;
+      flex:0 0 auto;
+    }
+
+    .round-name{
+      font-weight:900;
+    }
+
+    .round-meta{
+      margin-top:2px;
+      color:var(--muted);
+      font-size:.8rem;
+    }
+
+    .score-summary{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .score-mini{
+      padding:10px;
+      border-radius:12px;
+      background:var(--panel-soft);
+      border:1px solid var(--line);
+    }
+
+    .score-mini span{
+      display:block;
+      color:var(--muted);
+      font-size:.75rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .score-mini strong{
+      display:block;
+      margin-top:5px;
+      font-size:1.2rem;
+    }
+
+    .tabs{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom:14px;
+    }
+
+    .tab{
+      border:1px solid var(--line);
+      background:var(--panel-soft);
+      color:var(--muted);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:.88rem;
+      font-weight:850;
+    }
+
+    .tab.active{
+      color:white;
+      background:var(--primary);
+      border-color:var(--primary);
+    }
+
+    .table-wrap{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:14px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:720px;
+      background:#fff;
+    }
+
+    thead th{
+      text-align:left;
+      padding:12px 14px;
+      background:#f8fafc;
+      border-bottom:1px solid var(--line);
+      color:#475569;
+      font-size:.76rem;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+    }
+
+    tbody td{
+      padding:13px 14px;
+      border-bottom:1px solid var(--line);
+      color:#1e293b;
+      vertical-align:middle;
+    }
+
+    tbody tr:last-child td{
+      border-bottom:0;
+    }
+
+    tbody tr:hover{
+      background:#f8fafc;
+    }
+
+    .rank{
+      width:32px;
+      height:32px;
+      display:grid;
+      place-items:center;
+      border-radius:10px;
+      background:#f1f5f9;
+      color:#334155;
+      font-weight:900;
+    }
+
+    .rank.top1{
+      background:#fef3c7;
+      color:#92400e;
+    }
+
+    .rank.top2{
+      background:#e2e8f0;
+      color:#334155;
+    }
+
+    .rank.top3{
+      background:#ffedd5;
+      color:#9a3412;
+    }
+
+    .user-cell{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+    }
+
+    .avatar{
+      width:34px;
+      height:34px;
+      border-radius:11px;
+      display:grid;
+      place-items:center;
+      background:var(--primary-soft);
+      color:var(--primary-dark);
+      font-weight:900;
+      flex:0 0 auto;
+    }
+
+    .progress{
+      width:140px;
+      height:8px;
+      background:#e2e8f0;
+      border-radius:999px;
+      overflow:hidden;
+    }
+
+    .progress span{
+      display:block;
+      height:100%;
+      width:0%;
+      background:var(--primary);
+      border-radius:999px;
+    }
+
+    .history-list{
+      display:grid;
+      gap:10px;
+      max-height:400px;
+      overflow:auto;
+      padding-right:3px;
+    }
+
+    .history-item{
+      padding:13px;
+      border:1px solid var(--line);
+      border-radius:13px;
+      background:var(--panel-soft);
+    }
+
+    .history-head{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      font-weight:900;
+      margin-bottom:10px;
+    }
+
+    .history-meta{
+      color:var(--muted);
+      font-size:.84rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .countries{
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+    }
+
+    .country-chip{
+      display:inline-flex;
+      padding:6px 9px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--line);
+      color:#475569;
+      font-size:.8rem;
+      font-weight:800;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:22px;
+      transform:translateX(-50%) translateY(20px);
+      opacity:0;
+      pointer-events:none;
+      background:#0f172a;
+      color:white;
+      font-weight:850;
+      padding:12px 15px;
+      border-radius:14px;
+      box-shadow:0 18px 45px rgba(15,23,42,.25);
+      z-index:999;
+      transition:.22s ease;
+      max-width:calc(100vw - 28px);
+    }
+
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    @media(max-width:1020px){
+      .stats{
+        grid-template-columns:repeat(2,1fr);
+      }
+
+      .layout{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media(max-width:640px){
+      .app{
+        padding:16px;
+      }
+
+      .topbar{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+
+      .stats{
+        grid-template-columns:1fr;
+      }
+
+      .score-summary{
+        grid-template-columns:1fr;
+      }
+
+      .card{
+        padding:15px;
+      }
+
+      .brand h1{
+        font-size:1.25rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo">WG</div>
+        <div>
+          <h1>WordGuess Dashboard</h1>
+          <p>Control de rondas, países y ranking de jugadores</p>
         </div>
       </div>
+
+      <div class="date-chip">
+        <span class="status-dot"></span>
+        <span id="todayLabel">Hoy</span>
+      </div>
+    </header>
+
+    <section class="stats">
+      <article class="stat-card">
+        <div class="stat-label">Jugadores hoy</div>
+        <div class="stat-value" id="todayPlayers">0</div>
+        <div class="stat-sub">Usuarios con puntuación registrada</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-label">Usuarios</div>
+        <div class="stat-value" id="statUsers">0</div>
+        <div class="stat-sub">Jugadores registrados</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-label">Días jugados</div>
+        <div class="stat-value" id="statGames">0</div>
+        <div class="stat-sub">Partidas guardadas</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-label">Puntos totales</div>
+        <div class="stat-value" id="statPoints">0</div>
+        <div class="stat-sub">Suma histórica de la liga</div>
+      </article>
     </section>
 
-    <section id="players" class="section">
-      <div class="topbar"><div><h1>Jugadores</h1><p>Los nuevos participantes se guardan directamente en el JSON.</p></div></div>
-      <div class="grid forms-grid">
-        <form class="card" id="playerForm"><div class="field"><label>Nombre del jugador</label><input id="playerName" maxlength="32" placeholder="Ej. Red" required></div><button class="btn btn-primary">Añadir jugador</button></form>
-        <div class="card"><div class="card-head"><h3>Plantilla</h3><span id="playerCount" class="pill"></span></div><div id="playerList"></div></div>
-      </div>
-    </section>
+    <section class="layout">
+      <aside class="stack">
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Jugador activo</h2>
+            <span class="tag primary">Usuario</span>
+          </div>
 
-    <section id="history" class="section">
-      <div class="topbar"><div><h1>Historial</h1><p>Consulta y administra todos los resultados.</p></div></div>
-      <div class="card">
-        <div class="history-toolbar"><input id="historyMonth" type="month"><select id="historyPlayer"></select><select id="historyCategory"><option value="">Todas las categorías</option><option value="classic">Adivina Pokémon</option><option value="silhouette">Silueta</option><option value="zoom">Zoom / Carta</option><option value="description">Descripción</option></select></div>
-        <div style="overflow:auto"><table class="ranking"><thead><tr><th>Fecha</th><th>Jugador</th><th>Categoría</th><th>Intentos</th><th>Gen.</th><th>Puntos</th><th></th></tr></thead><tbody id="historyBody"></tbody></table></div>
-      </div>
+          <div class="field">
+            <label for="activeUser">Seleccionar usuario</label>
+            <select id="activeUser"></select>
+          </div>
+
+          <div class="info-box" id="activeUserNotice">
+            Registra un usuario para empezar.
+          </div>
+
+          <hr class="divider">
+
+          <div class="field">
+            <label for="newUserName">Nuevo usuario</label>
+            <input id="newUserName" placeholder="Nombre del jugador" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="newUserCountry">País del usuario</label>
+            <input id="newUserCountry" placeholder="Ej: España" autocomplete="off">
+          </div>
+
+          <button class="btn" id="addUserBtn">Guardar usuario</button>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Países del día</h2>
+            <span class="tag">3 rondas</span>
+          </div>
+
+          <div id="todayCountriesView" class="rounds"></div>
+
+          <div id="setCountriesBox">
+            <div class="info-box" style="margin-bottom:12px">
+              El primer jugador que entre configura los 3 países. Después, el resto solo tendrá que introducir su puntuación.
+            </div>
+
+            <div class="field">
+              <label for="country1">Ronda 1</label>
+              <input id="country1" placeholder="País de la ronda 1" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="country2">Ronda 2</label>
+              <input id="country2" placeholder="País de la ronda 2" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="country3">Ronda 3</label>
+              <input id="country3" placeholder="País de la ronda 3" autocomplete="off">
+            </div>
+
+            <button class="btn success" id="saveCountriesBtn">Guardar países</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Registrar puntuación</h2>
+            <span class="tag">Hoy</span>
+          </div>
+
+          <div id="scoreFormBox">
+            <div class="score-summary">
+              <div class="score-mini">
+                <span>Ronda 1</span>
+                <strong id="countryMini1">-</strong>
+              </div>
+              <div class="score-mini">
+                <span>Ronda 2</span>
+                <strong id="countryMini2">-</strong>
+              </div>
+              <div class="score-mini">
+                <span>Ronda 3</span>
+                <strong id="countryMini3">-</strong>
+              </div>
+            </div>
+
+            <div class="field">
+              <label id="scoreLabel1" for="score1">Puntos ronda 1</label>
+              <input id="score1" type="number" min="0" step="1" placeholder="0">
+            </div>
+
+            <div class="field">
+              <label id="scoreLabel2" for="score2">Puntos ronda 2</label>
+              <input id="score2" type="number" min="0" step="1" placeholder="0">
+            </div>
+
+            <div class="field">
+              <label id="scoreLabel3" for="score3">Puntos ronda 3</label>
+              <input id="score3" type="number" min="0" step="1" placeholder="0">
+            </div>
+
+            <button class="btn" id="saveScoreBtn">Guardar puntuación</button>
+          </div>
+
+          <div id="scoreBlocked" class="info-box hidden">
+            Primero deben configurarse los 3 países del día.
+          </div>
+        </section>
+      </aside>
+
+      <section class="stack">
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Ranking</h2>
+            <span class="tag primary" id="rankingPeriodLabel">Semanal</span>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-period="week">Semanal</button>
+            <button class="tab" data-period="month">Mensual</button>
+            <button class="tab" data-period="total">Total</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Usuario</th>
+                  <th>País</th>
+                  <th>Puntos</th>
+                  <th>Partidas</th>
+                  <th>Media</th>
+                  <th>Progreso</th>
+                </tr>
+              </thead>
+              <tbody id="rankingBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Historial</h2>
+            <span class="tag">Días anteriores</span>
+          </div>
+
+          <div class="history-list" id="historyList"></div>
+        </section>
+      </section>
     </section>
   </main>
-</div>
-<div id="toast" class="toast"></div>
-<script src="app.js"></script>
-</body></html>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const USERS_URL = "data/users.json";
+    const SCORES_URL = "data/scores.json";
+
+    const els = {
+      todayLabel: document.getElementById("todayLabel"),
+      todayPlayers: document.getElementById("todayPlayers"),
+      statUsers: document.getElementById("statUsers"),
+      statGames: document.getElementById("statGames"),
+      statPoints: document.getElementById("statPoints"),
+
+      activeUser: document.getElementById("activeUser"),
+      activeUserNotice: document.getElementById("activeUserNotice"),
+      newUserName: document.getElementById("newUserName"),
+      newUserCountry: document.getElementById("newUserCountry"),
+
+      todayCountriesView: document.getElementById("todayCountriesView"),
+      setCountriesBox: document.getElementById("setCountriesBox"),
+      country1: document.getElementById("country1"),
+      country2: document.getElementById("country2"),
+      country3: document.getElementById("country3"),
+
+      scoreFormBox: document.getElementById("scoreFormBox"),
+      scoreBlocked: document.getElementById("scoreBlocked"),
+      score1: document.getElementById("score1"),
+      score2: document.getElementById("score2"),
+      score3: document.getElementById("score3"),
+      scoreLabel1: document.getElementById("scoreLabel1"),
+      scoreLabel2: document.getElementById("scoreLabel2"),
+      scoreLabel3: document.getElementById("scoreLabel3"),
+      countryMini1: document.getElementById("countryMini1"),
+      countryMini2: document.getElementById("countryMini2"),
+      countryMini3: document.getElementById("countryMini3"),
+
+      rankingBody: document.getElementById("rankingBody"),
+      rankingPeriodLabel: document.getElementById("rankingPeriodLabel"),
+      historyList: document.getElementById("historyList"),
+      toast: document.getElementById("toast")
+    };
+
+    const defaultUsers = { users: [] };
+    const defaultScores = { games: [] };
+
+    let usersData = structuredClone(defaultUsers);
+    let scoresData = structuredClone(defaultScores);
+    let currentPeriod = "week";
+
+    function todayISO(){
+      const d = new Date();
+      return [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, "0"),
+        String(d.getDate()).padStart(2, "0")
+      ].join("-");
+    }
+
+    function parseISODate(iso){
+      const [y,m,d] = iso.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function formatDate(iso){
+      const d = parseISODate(iso);
+      return d.toLocaleDateString("es-ES", {
+        weekday:"long",
+        day:"2-digit",
+        month:"long",
+        year:"numeric"
+      });
+    }
+
+    function slugify(text){
+      return text
+        .toString()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 44);
+    }
+
+    function safeNumber(value){
+      const n = Number(value);
+      return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showToast(message){
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      setTimeout(() => els.toast.classList.remove("show"), 2200);
+    }
+
+    function selectedUserId(){
+      return localStorage.getItem("wordguess.activeUserId") || "";
+    }
+
+    function setSelectedUserId(id){
+      localStorage.setItem("wordguess.activeUserId", id);
+    }
+
+    async function loadJson(url, fallback, localKey){
+      const local = localStorage.getItem(localKey);
+
+      if(local){
+        try{
+          return JSON.parse(local);
+        }catch(e){}
+      }
+
+      try{
+        const res = await fetch(url, { cache:"no-store" });
+        if(!res.ok) throw new Error("No se pudo cargar JSON");
+        return await res.json();
+      }catch(e){
+        return structuredClone(fallback);
+      }
+    }
+
+    function saveLocal(){
+      localStorage.setItem("wordguess.users", JSON.stringify(usersData, null, 2));
+      localStorage.setItem("wordguess.scores", JSON.stringify(scoresData, null, 2));
+    }
+
+    function normalizeData(){
+      if(!usersData || !Array.isArray(usersData.users)){
+        usersData = structuredClone(defaultUsers);
+      }
+
+      if(!scoresData || !Array.isArray(scoresData.games)){
+        scoresData = structuredClone(defaultScores);
+      }
+
+      usersData.users = usersData.users.map(user => ({
+        id:user.id || slugify(user.name || crypto.randomUUID()),
+        name:user.name || "Usuario",
+        country:user.country || "",
+        createdAt:user.createdAt || todayISO()
+      }));
+
+      scoresData.games = scoresData.games
+        .filter(game => /^\d{4}-\d{2}-\d{2}$/.test(game.date || ""))
+        .map(game => {
+          const rounds = Array.isArray(game.rounds) ? game.rounds.slice(0,3) : [];
+
+          while(rounds.length < 3){
+            rounds.push({ round:rounds.length + 1, country:"" });
+          }
+
+          return {
+            date:game.date,
+            rounds:rounds.map((round, index) => ({
+              round:round.round || index + 1,
+              country:round.country || ""
+            })),
+            entries:Array.isArray(game.entries)
+              ? game.entries.map(entry => {
+                const scores = Array.isArray(entry.scores) ? entry.scores.slice(0,3).map(safeNumber) : [0,0,0];
+
+                while(scores.length < 3){
+                  scores.push(0);
+                }
+
+                return {
+                  userId:entry.userId,
+                  scores,
+                  total:scores.reduce((a,b) => a + b, 0),
+                  createdAt:entry.createdAt || game.date,
+                  updatedAt:entry.updatedAt || null
+                };
+              })
+              : []
+          };
+        });
+    }
+
+    function getGame(date = todayISO()){
+      return scoresData.games.find(game => game.date === date);
+    }
+
+    function ensureGame(date = todayISO()){
+      let game = getGame(date);
+
+      if(!game){
+        game = {
+          date,
+          rounds:[
+            { round:1, country:"" },
+            { round:2, country:"" },
+            { round:3, country:"" }
+          ],
+          entries:[]
+        };
+
+        scoresData.games.push(game);
+      }
+
+      return game;
+    }
+
+    function countriesReady(game){
+      return !!game &&
+        Array.isArray(game.rounds) &&
+        game.rounds.length === 3 &&
+        game.rounds.every(round => String(round.country || "").trim().length > 0);
+    }
+
+    function renderUsers(){
+      const selected = selectedUserId();
+      els.activeUser.innerHTML = "";
+
+      if(usersData.users.length === 0){
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Sin usuarios";
+        els.activeUser.appendChild(option);
+        els.activeUserNotice.textContent = "Registra un usuario para poder guardar puntuaciones.";
+        return;
+      }
+
+      usersData.users.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user.id;
+        option.textContent = user.country ? `${user.name} · ${user.country}` : user.name;
+        els.activeUser.appendChild(option);
+      });
+
+      const exists = usersData.users.some(user => user.id === selected);
+      const id = exists ? selected : usersData.users[0].id;
+
+      els.activeUser.value = id;
+      setSelectedUserId(id);
+
+      const user = usersData.users.find(item => item.id === id);
+
+      els.activeUserNotice.innerHTML = user
+        ? `Jugador seleccionado: <b>${escapeHtml(user.name)}</b>${user.country ? ` · ${escapeHtml(user.country)}` : ""}`
+        : "Selecciona un usuario.";
+    }
+
+    function renderTodayCountries(){
+      const game = getGame(todayISO());
+      const ready = countriesReady(game);
+
+      els.todayCountriesView.innerHTML = "";
+
+      if(ready){
+        game.rounds.forEach(round => {
+          const item = document.createElement("div");
+          item.className = "round-card";
+          item.innerHTML = `
+            <div class="round-number">${round.round}</div>
+            <div>
+              <div class="round-name">${escapeHtml(round.country)}</div>
+              <div class="round-meta">Ronda ${round.round} configurada</div>
+            </div>
+          `;
+          els.todayCountriesView.appendChild(item);
+        });
+
+        els.setCountriesBox.classList.add("hidden");
+        els.scoreFormBox.classList.remove("hidden");
+        els.scoreBlocked.classList.add("hidden");
+
+        els.countryMini1.textContent = game.rounds[0].country;
+        els.countryMini2.textContent = game.rounds[1].country;
+        els.countryMini3.textContent = game.rounds[2].country;
+
+        els.scoreLabel1.textContent = `Puntos ronda 1 · ${game.rounds[0].country}`;
+        els.scoreLabel2.textContent = `Puntos ronda 2 · ${game.rounds[1].country}`;
+        els.scoreLabel3.textContent = `Puntos ronda 3 · ${game.rounds[2].country}`;
+      }else{
+        els.setCountriesBox.classList.remove("hidden");
+        els.scoreFormBox.classList.add("hidden");
+        els.scoreBlocked.classList.remove("hidden");
+      }
+    }
+
+    function renderCurrentScore(){
+      const game = getGame(todayISO());
+      const userId = selectedUserId();
+      const entry = game?.entries?.find(item => item.userId === userId);
+
+      els.score1.value = entry?.scores?.[0] ?? "";
+      els.score2.value = entry?.scores?.[1] ?? "";
+      els.score3.value = entry?.scores?.[2] ?? "";
+    }
+
+    function inCurrentWeek(iso){
+      const date = parseISODate(iso);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekday = (today.getDay() + 6) % 7;
+
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - weekday);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      return date >= monday && date <= sunday;
+    }
+
+    function inCurrentMonth(iso){
+      const date = parseISODate(iso);
+      const now = new Date();
+
+      return date.getFullYear() === now.getFullYear() &&
+        date.getMonth() === now.getMonth();
+    }
+
+    function aggregateRanking(period){
+      const map = new Map();
+
+      usersData.users.forEach(user => {
+        map.set(user.id, {
+          user,
+          points:0,
+          games:0,
+          avg:0
+        });
+      });
+
+      scoresData.games.forEach(game => {
+        const include =
+          period === "total" ||
+          (period === "week" && inCurrentWeek(game.date)) ||
+          (period === "month" && inCurrentMonth(game.date));
+
+        if(!include) return;
+
+        game.entries.forEach(entry => {
+          if(!map.has(entry.userId)) return;
+
+          const row = map.get(entry.userId);
+          row.points += safeNumber(entry.total);
+          row.games += 1;
+        });
+      });
+
+      return [...map.values()]
+        .filter(row => row.points > 0 || row.games > 0)
+        .map(row => ({
+          ...row,
+          avg:row.games ? row.points / row.games : 0
+        }))
+        .sort((a,b) =>
+          b.points - a.points ||
+          b.avg - a.avg ||
+          a.user.name.localeCompare(b.user.name)
+        );
+    }
+
+    function renderRanking(){
+      const labels = {
+        week:"Semanal",
+        month:"Mensual",
+        total:"Total"
+      };
+
+      const ranking = aggregateRanking(currentPeriod);
+      const maxPoints = Math.max(1, ...ranking.map(row => row.points));
+
+      els.rankingPeriodLabel.textContent = labels[currentPeriod];
+      els.rankingBody.innerHTML = "";
+
+      if(ranking.length === 0){
+        els.rankingBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="padding:22px;text-align:center;color:#64748b">
+              Todavía no hay puntuaciones para este periodo.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      ranking.forEach((row, index) => {
+        const tr = document.createElement("tr");
+        const rankClass = index === 0 ? "top1" : index === 1 ? "top2" : index === 2 ? "top3" : "";
+        const percent = Math.round((row.points / maxPoints) * 100);
+
+        tr.innerHTML = `
+          <td><div class="rank ${rankClass}">${index + 1}</div></td>
+          <td>
+            <div class="user-cell">
+              <div class="avatar">${escapeHtml(row.user.name.slice(0,1).toUpperCase())}</div>
+              <span>${escapeHtml(row.user.name)}</span>
+            </div>
+          </td>
+          <td>${escapeHtml(row.user.country || "-")}</td>
+          <td><b>${row.points}</b></td>
+          <td>${row.games}</td>
+          <td>${row.avg.toFixed(1)}</td>
+          <td>
+            <div class="progress">
+              <span style="width:${percent}%"></span>
+            </div>
+          </td>
+        `;
+
+        els.rankingBody.appendChild(tr);
+      });
+    }
+
+    function renderHistory(){
+      const sorted = [...scoresData.games].sort((a,b) => b.date.localeCompare(a.date));
+      els.historyList.innerHTML = "";
+
+      if(sorted.length === 0){
+        els.historyList.innerHTML = `<div class="info-box">Aún no hay historial.</div>`;
+        return;
+      }
+
+      sorted.forEach(game => {
+        const entries = game.entries || [];
+        const totalPlayers = entries.length;
+        const totalPoints = entries.reduce((sum, entry) => sum + safeNumber(entry.total), 0);
+        const countries = (game.rounds || []).map(round => round.country).filter(Boolean);
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerHTML = `
+          <div class="history-head">
+            <span>${formatDate(game.date)}</span>
+            <span class="history-meta">${totalPlayers} jugadores · ${totalPoints} pts</span>
+          </div>
+
+          <div class="countries">
+            ${
+              countries.length
+                ? countries.map((country, index) => `<span class="country-chip">R${index + 1}: ${escapeHtml(country)}</span>`).join("")
+                : `<span style="color:#64748b;font-size:.86rem">Sin países definidos</span>`
+            }
+          </div>
+        `;
+
+        els.historyList.appendChild(item);
+      });
+    }
+
+    function renderStats(){
+      const todayGame = getGame(todayISO());
+      const totalPoints = scoresData.games.reduce((sum, game) => {
+        return sum + (game.entries || []).reduce((partial, entry) => partial + safeNumber(entry.total), 0);
+      }, 0);
+
+      els.todayLabel.textContent = formatDate(todayISO());
+      els.todayPlayers.textContent = todayGame?.entries?.length || 0;
+      els.statUsers.textContent = usersData.users.length;
+      els.statGames.textContent = scoresData.games.length;
+      els.statPoints.textContent = totalPoints;
+    }
+
+    function renderAll(){
+      renderUsers();
+      renderTodayCountries();
+      renderCurrentScore();
+      renderRanking();
+      renderHistory();
+      renderStats();
+    }
+
+    function addUser(){
+      const name = els.newUserName.value.trim();
+      const country = els.newUserCountry.value.trim();
+
+      if(!name){
+        showToast("Escribe el nombre del usuario.");
+        return;
+      }
+
+      let id = slugify(name) || crypto.randomUUID();
+      const baseId = id;
+      let counter = 2;
+
+      while(usersData.users.some(user => user.id === id)){
+        id = `${baseId}-${counter++}`;
+      }
+
+      usersData.users.push({
+        id,
+        name,
+        country,
+        createdAt:todayISO()
+      });
+
+      els.newUserName.value = "";
+      els.newUserCountry.value = "";
+
+      setSelectedUserId(id);
+      saveLocal();
+      renderAll();
+      showToast("Usuario guardado.");
+    }
+
+    function saveCountries(){
+      const countries = [
+        els.country1.value.trim(),
+        els.country2.value.trim(),
+        els.country3.value.trim()
+      ];
+
+      if(countries.some(country => !country)){
+        showToast("Completa los 3 países.");
+        return;
+      }
+
+      const game = ensureGame(todayISO());
+
+      game.rounds = countries.map((country, index) => ({
+        round:index + 1,
+        country
+      }));
+
+      saveLocal();
+      renderAll();
+      showToast("Países del día guardados.");
+    }
+
+    function saveScore(){
+      const userId = selectedUserId();
+
+      if(!userId || !usersData.users.some(user => user.id === userId)){
+        showToast("Selecciona o crea un usuario.");
+        return;
+      }
+
+      const game = getGame(todayISO());
+
+      if(!countriesReady(game)){
+        showToast("Primero guarda los países del día.");
+        return;
+      }
+
+      const scores = [
+        safeNumber(els.score1.value),
+        safeNumber(els.score2.value),
+        safeNumber(els.score3.value)
+      ];
+
+      const total = scores.reduce((sum, score) => sum + score, 0);
+      let entry = game.entries.find(item => item.userId === userId);
+
+      if(!entry){
+        entry = {
+          userId,
+          scores,
+          total,
+          createdAt:new Date().toISOString()
+        };
+
+        game.entries.push(entry);
+      }else{
+        entry.scores = scores;
+        entry.total = total;
+        entry.updatedAt = new Date().toISOString();
+      }
+
+      saveLocal();
+      renderAll();
+      showToast(`Puntuación guardada: ${total} puntos.`);
+    }
+
+    document.getElementById("addUserBtn").addEventListener("click", addUser);
+    document.getElementById("saveCountriesBtn").addEventListener("click", saveCountries);
+    document.getElementById("saveScoreBtn").addEventListener("click", saveScore);
+
+    els.activeUser.addEventListener("change", () => {
+      setSelectedUserId(els.activeUser.value);
+      renderUsers();
+      renderCurrentScore();
+    });
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        currentPeriod = button.dataset.period;
+        renderRanking();
+      });
+    });
+
+    (async function init(){
+      usersData = await loadJson(USERS_URL, defaultUsers, "wordguess.users");
+      scoresData = await loadJson(SCORES_URL, defaultScores, "wordguess.scores");
+
+      normalizeData();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

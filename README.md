@@ -1,35 +1,32 @@
-# Pokédle League
+# WordGuess League Dashboard
 
-Panel SaaS local para gestionar una competición entre amigos.
+Dashboard estático preparado para GitHub Pages.
 
-## Inicio
+## Estructura
 
-1. Instala Node.js 18 o superior.
-2. Abre una terminal dentro de esta carpeta.
-3. Ejecuta:
+- `index.html`
+- `data/users.json`
+- `data/scores.json`
 
-```bash
-node server.js
-```
+## Funcionamiento
 
-4. Abre `http://localhost:3000`.
+El HTML lee los datos desde los JSON de la carpeta `data`.
 
-## Datos
+Como GitHub Pages es estático, el navegador no puede escribir directamente sobre esos JSON del repositorio.
+Por eso el dashboard guarda cambios en `localStorage` y permite exportar `users.json` y `scores.json`.
+Para que los demás usuarios vean los cambios, sube los JSON exportados de nuevo a la carpeta `data` del repositorio.
 
-Los jugadores y resultados se guardan en `database.json`, situado en la raíz. El servidor usa escritura atómica básica para reducir el riesgo de corrupción.
+## Uso recomendado
 
-## Funciones
+1. Sube la carpeta completa al repositorio.
+2. Activa GitHub Pages.
+3. El primer usuario configura los 3 países del día.
+4. Exporta `scores.json` y súbelo a `/data/scores.json`.
+5. Los demás usuarios ya verán esos países al entrar.
+6. Cada cierto tiempo, exporta y sube los JSON actualizados.
 
-- Alta de jugadores.
-- Registro y actualización de resultados diarios.
-- Categorías: Adivina Pokémon, Silueta, Zoom/Carta y Descripción.
-- Intentos y generación obligatorios.
-- Ranking mensual.
-- Media de puntos e intentos.
-- Gráficos por categoría, generación y evolución mensual.
-- Historial con filtros y eliminación.
-- Diseño responsive.
+## Si quieres guardado online real
 
-## Producción
-
-Esta versión está pensada para un grupo privado y un único proceso. Para publicarla en Internet conviene añadir autenticación, HTTPS y migrar el JSON a SQLite/PostgreSQL.
+Para que cada usuario guarde datos y todos los vean automáticamente sin subir JSON manualmente,
+necesitas un backend externo: Firebase, Supabase, Google Sheets API o una pequeña API propia.
+No es recomendable meter un token de GitHub en el HTML porque quedaría visible públicamente.
