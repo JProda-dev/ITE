@@ -1,0 +1,33 @@
+{
+  "games": [
+    {
+      "date": "2026-06-23",
+      "rounds": [
+        {
+          "round": 1,
+          "country": "Francia"
+        },
+        {
+          "round": 2,
+          "country": "Brasil"
+        },
+        {
+          "round": 3,
+          "country": "Japón"
+        }
+      ],
+      "entries": [
+        {
+          "userId": "demo-jose",
+          "scores": [
+            4,
+            3,
+            5
+          ],
+          "total": 12,
+          "createdAt": "2026-06-23T10:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}

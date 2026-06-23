@@ -1,0 +1,10 @@
+{
+  "users": [
+    {
+      "id": "demo-jose",
+      "name": "Jose",
+      "country": "España",
+      "createdAt": "2026-06-23"
+    }
+  ]
+}
